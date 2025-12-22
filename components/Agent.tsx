@@ -3,6 +3,7 @@ import { Card } from "./ui/card";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { AgentProps } from "@/types";
 
 enum CallState {
   INACTIVE = "INACTIVE",
