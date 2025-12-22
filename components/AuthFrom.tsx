@@ -1,147 +1,168 @@
 "use client";
 
-import React from "react";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { toast } from "sonner";
+import { auth } from "@/firebase/client";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-type FormType = "sign-in" | "sign-up";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 
-const authFormSchema = (type: FormType) =>
-  z.object({
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+
+import { signIn, signUp } from "@/lib/actions/auth.action";
+import FormField from "./FormField";
+import { Card } from "./ui/card";
+
+const authFormSchema = (type: FormType) => {
+  return z.object({
+    name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
     email: z.string().email(),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    fullName:
-      type === "sign-up"
-        ? z.string().min(2, "Full name is required")
-        : z.string().optional(),
+    password: z.string().min(3),
   });
+};
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
-  const isSignIn = type === "sign-in";
-  const schema = authFormSchema(type);
 
-  const form = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
+  const formSchema = authFormSchema(type);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
-      fullName: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof schema>) => {
-    console.log(values);
-    toast.success("Account created successfully. Please sign in.");
-    router.push("/sign-in");
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      if (type === "sign-up") {
+        const { name, email, password } = data;
+
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const result = await signUp({
+          uid: userCredential.user.uid,
+          name: name!,
+          email,
+          password,
+        });
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success("Account created successfully. Please sign in.");
+        router.push("/sign-in");
+      } else {
+        const { email, password } = data;
+
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const idToken = await userCredential.user.getIdToken();
+        if (!idToken) {
+          toast.error("Sign in Failed. Please try again.");
+          return;
+        }
+
+        const result = await signIn({
+          email,
+          idToken,
+        });
+
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("Signed in successfully.");
+        router.push("/");
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(`There was an error: ${error}`);
+    }
   };
 
+  const isSignIn = type === "sign-in";
+
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-[466px] border-none shadow-xl ">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold tracking-tight">
-            {isSignIn ? "Welcome back" : "Create an account"}
-          </CardTitle>
-          <CardDescription>
-            {isSignIn
-              ? "Enter your credentials to access your account"
-              : "Enter your details below to get started"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {!isSignIn && (
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+    <Card className="card-border lg:min-w-[566px]">
+      <div className="flex flex-col gap-6 card py-14 px-10">
+        <div className="flex flex-row gap-2 justify-center">
+          <Image src="/logo.svg" alt="logo" height={32} width={38} />
+          <h2 className="text-primary-100 text-2xl">PrepWise</h2>
+        </div>
+
+        <h3 className="text-2xl font-semibold">
+          Practice job interviews with AI
+        </h3>
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="w-full space-y-6 mt-4 form"
+          >
+            {!isSignIn && (
               <FormField
                 control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="name@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                name="name"
+                label="Name"
+                placeholder="Your Name"
+                type="text"
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full font-semibold transition-all hover:scale-[1.02]"
-              >
-                {isSignIn ? "Sign In" : "Sign Up"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4 text-center text-sm text-muted-foreground">
-          <div>
-            {isSignIn ? "Don't have an account? " : "Already have an account? "}
-            <Link
-              href={isSignIn ? "/sign-up" : "/sign-in"}
-              className="font-semibold text-primary underline underline-offset-4"
-            >
-              {isSignIn ? "Sign up" : "Sign in"}
-            </Link>
-          </div>
-        </CardFooter>
-      </Card>
-    </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="email"
+              label="Email"
+              placeholder="Your email address"
+              type="email"
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              label="Password"
+              placeholder="Enter your password"
+              type="password"
+            />
+
+            <Button className="btn" type="submit">
+              {isSignIn ? "Sign In" : "Create an Account"}
+            </Button>
+          </form>
+        </Form>
+
+        <p className="text-center">
+          {isSignIn ? "No account yet?" : "Have an account already?"}
+          <Link
+            href={!isSignIn ? "/sign-in" : "/sign-up"}
+            className="font-bold text-user-primary ml-1"
+          >
+            {!isSignIn ? "Sign In" : "Sign Up"}
+          </Link>
+        </p>
+      </div>
+    </Card>
   );
 };
 
