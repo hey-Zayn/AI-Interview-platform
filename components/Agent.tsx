@@ -3,7 +3,7 @@ import { Card } from "./ui/card";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { AgentProps } from "@/types";
+import { type AgentProps } from "@/types/index";
 
 enum CallState {
   INACTIVE = "INACTIVE",
@@ -11,7 +11,7 @@ enum CallState {
   ACTIVE = "ACTIVE",
   FINISHED = "FINISHED",
 }
-const Agent = ({ userName }: AgentProps) => {
+const Agent: React.FC<AgentProps> = ({ userName }) => {
   const callStatus = CallState.ACTIVE;
   const isSpeaking = true;
   const message = [
