@@ -5,7 +5,7 @@ import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
 
 
-const ONE_WEEK = 60 * 60 * 24 * 7;
+const ONE_WEEK = 60 * 60 * 24 * 7 * 1000;
 
 
 export async function signUp(params:SignUpParams) {
@@ -27,7 +27,7 @@ export async function signUp(params:SignUpParams) {
             message: "User created successfully",
             error: null,
         }
-    } catch (error) {
+    } catch (error: any) {
             console.log(`Error in signUp: ${error}`);
             if(error.code === "auth/email-already-exists") {
                 return {
@@ -121,7 +121,7 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 // Check if user is authenticated
-export async function isAuthenticated() {
+export async function checkAuthStatus() {
   const user = await getCurrentUser();
   return !!user;
 }
