@@ -25,7 +25,7 @@ const authFormSchema = (type: FormType) => {
   return z.object({
     name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
     email: z.string().email(),
-    password: z.string().min(3),
+    password: z.string().min(8, "Password must be at least 8 characters"),
   });
 };
 
@@ -61,7 +61,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
         });
 
         if (!result.success) {
-          toast.error(result.message);
+          // Clean up Firebase Auth user if Firestore write fails
+          await userCredential.user.delete();
+          toast.error(result.error);
+
           return;
         }
 
@@ -97,7 +100,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error(`There was an error: ${error}`);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
 
