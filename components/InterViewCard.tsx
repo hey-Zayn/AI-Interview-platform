@@ -1,6 +1,6 @@
 import React from "react";
 import dayjs from "dayjs";
-import { InterviewCardProps } from "@/types";
+import { InterviewCardProps, Feedback } from "@/types";
 import { Card, CardHeader, CardContent } from "./ui/card";
 import Image from "next/image";
 import { getRandomInterviewCover } from "@/lib/utils";
@@ -19,9 +19,10 @@ const InterViewCard = ({
 }: InterviewCardProps) => {
   const feedback = null as Feedback | null;
   const normalizedType = /mix/gi.test(type) ? "Mix" : type;
-  const formattedDate = dayjs(
-    feedback?.createdAt || createdAt || Date.now()
-  ).format("DD/MM/YYYY");
+  const dateValue = feedback?.createdAt || createdAt;
+  const formattedDate = dateValue
+    ? dayjs(dateValue).format("DD/MM/YYYY")
+    : "N/A";
 
   return (
     <Card className=" w-[360px] max-sm:w-full p-1">
