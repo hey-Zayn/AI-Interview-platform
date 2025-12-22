@@ -1,8 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+import { isAuthenticated } from "@/lib/actions/auth.action";
+import { redirect } from "next/navigation";
 
-const layout = ({ children }: { children: React.ReactNode }) => {
+const layout = async ({ children }: { children: React.ReactNode }) => {
+  const isAuthenticatedUser = await isAuthenticated();
+  if (!isAuthenticatedUser) {
+    return redirect("/sign-in");
+  }
+
   return (
     <div>
       <nav className="flex items-center justify-between px-12 py-6">
