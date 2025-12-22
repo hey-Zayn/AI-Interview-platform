@@ -1,11 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { isAuthenticated } from "@/lib/actions/auth.action";
+import { checkAuthStatus } from "@/lib/actions/auth.action";
 import { redirect } from "next/navigation";
 
 const layout = async ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticatedUser = await isAuthenticated();
+  const isAuthenticatedUser = await checkAuthStatus();
   if (!isAuthenticatedUser) {
     return redirect("/sign-in");
   }

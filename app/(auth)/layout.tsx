@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import React from "react";
-import { isAuthenticated } from "@/lib/actions/auth.action";
+import { checkAuthStatus } from "@/lib/actions/auth.action";
 
 const layout = async ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticatedUser = await isAuthenticated();
+  const isAuthenticatedUser = await checkAuthStatus();
   if (isAuthenticatedUser) {
     return redirect("/");
   }
