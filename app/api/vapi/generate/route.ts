@@ -1,8 +1,7 @@
-import { db } from "@/firebase/admin";
+import { auth, db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-
 
 export function GET() {
     return Response.json({
@@ -12,16 +11,36 @@ export function GET() {
 }
 
 export async function POST(request: Request) {
-    const { type, role, level, techstack, amount, userid } = await request.json();
     try {
+        const body = await request.json();
+        const { role, level, techstack, userid } = body;
+
+        // Basic check to verify the userid against Firebase Admin
+        if (!userid) {
+            return Response.json({
+                success: false,
+                message: "Missing userid in request body"
+            }, { status: 400 });
+        }
+
+        try {
+            await auth.getUser(userid);
+        } catch (authError) {
+            console.error("Firebase Admin Auth Error:", authError);
+            return Response.json({
+                success: false,
+                message: "Invalid or unauthorized userid"
+            }, { status: 401 });
+        }
+
         const { text: questions } = await generateText({
             model: google("gemini-2.5-flash-lite"),
             prompt: `Prepare questions for a job interview.
         The job role is ${role}.
         The job experience level is ${level}.
         The tech stack used in the job is: ${techstack}.
-        The focus between behavioural and technical questions should lean towards: ${type}.
-        The amount of questions required is: ${amount}.
+        Focus on both technical and behavioural questions.
+        The amount of questions required is: 5.
         Please return only the questions, without any additional text.
         The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
         Return the questions formatted like this:
@@ -30,11 +49,12 @@ export async function POST(request: Request) {
         Thank you! <3
     `
         });
+
         const interview = {
             role: role,
-            type: type,
+            type: "Mixed",
             level: level,
-            techstack: techstack.split(","),
+            techstack: techstack.split(",").map((s: string) => s.trim()),
             questions: JSON.parse(questions),
             userId: userid,
             finalized: true,
@@ -43,17 +63,21 @@ export async function POST(request: Request) {
         }
 
         await db.collection('interviews').add(interview);
+
+        // Ensuring the response is formatted correctly for Vapi (using a result key)
         return Response.json({
-            success: true,
-            message: "Interview generated successfully",
-            interview
+            result: {
+                success: true,
+                message: "Interview generated successfully",
+                interview
+            }
         }, { status: 200 })
+
     } catch (err: unknown) {
-        console.error("Gemini API Error:", err);
+        console.error("API Error:", err);
 
         const error = err as { statusCode?: number; message?: string };
 
-        // Handle specifically for rate limit / quota
         if (error.statusCode === 429) {
             return Response.json({
                 success: false,
